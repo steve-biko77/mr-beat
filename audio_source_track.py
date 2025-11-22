@@ -5,7 +5,7 @@ class AudioSourceTrack:
     def __init__(self, wav_samples):
         self.set_sample(wav_samples)
         self.steps = []
-        self.playhead = 0  # position dans le sample en cours de lecture
+        self.playhead = 0
 
     def set_sample(self, wav_samples):
         if hasattr(wav_samples, 'tobytes'):
@@ -29,15 +29,16 @@ class AudioSourceTrack:
 
         for i in range(n_samples):
             current_sample = global_sample_pos + i
-            step_index = int(current_sample / samples_per_step) % len(self.steps)
+            step_idx = int(current_sample / samples_per_step) % len(self.steps)
 
-            # Détection du front montant de step
-            prev_step = int((current_sample - 1) / samples_per_step) % len(self.steps)
-            if step_index != prev_step and self.steps[step_index]:
+            # Détection du début d’un nouveau step
+            prev_sample = current_sample - 1 if i > 0 else current_sample
+            prev_step = int(prev_sample / samples_per_step) % len(self.steps)
+
+            if step_idx != prev_step and self.steps[step_idx]:
                 self.playhead = 0  # TRIGGER !
 
-            # Lecture du sample si le step est actif
-            if self.steps[step_index] and self.playhead < len(self.samples):
+            if self.steps[step_idx] and self.playhead < len(self.samples):
                 out[i] = self.samples[self.playhead]
                 self.playhead += 1
 

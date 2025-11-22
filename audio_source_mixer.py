@@ -16,9 +16,8 @@ class AudioSourceMixer:
         self.on_step_changed = on_step_changed
         self.is_playing = False
 
-        # Timing précis (16 steps = 1 mesure 4/4)
         self.samples_per_step = self.SAMPLE_RATE * 60 / self.bpm / 4
-        self.total_samples = 0  # temps absolu depuis le play
+        self.total_samples = 0
 
         self.tracks = []
         for wav in all_wav_samples:
@@ -37,8 +36,8 @@ class AudioSourceMixer:
     def audio_play(self):
         self.is_playing = True
         self.total_samples = 0
-        for track in self.tracks:
-            track.reset()
+        for t in self.tracks:
+            t.reset()
 
     def audio_stop(self):
         self.is_playing = False
@@ -47,20 +46,18 @@ class AudioSourceMixer:
         if not self.is_playing:
             return bytes(n_samples * 2)
 
-        mixed = np.zeros(n_samples, dtype=np.int32)
-
         start_sample = self.total_samples
         self.total_samples += n_samples
 
+        mixed = np.zeros(n_samples, dtype=np.int32)
         for track in self.tracks:
             mixed += track.render(n_samples, start_sample, self.samples_per_step)
 
-        # Détection du changement de step
         old_step = int(start_sample / self.samples_per_step) % self.nb_steps
         new_step = int(self.total_samples / self.samples_per_step) % self.nb_steps
 
         if new_step != old_step and self.on_step_changed:
-            display_step = (new_step - 2) % self.nb_steps  # compensation latence
-            self.on_step_changed(display_step)
+            display = (new_step - 2) % self.nb_steps
+            self.on_step_changed(display)
 
         return np.clip(mixed, -32768, 32767).astype(np.int16).tobytes()
